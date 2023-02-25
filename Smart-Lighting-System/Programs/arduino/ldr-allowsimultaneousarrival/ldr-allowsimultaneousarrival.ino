@@ -3,7 +3,11 @@
 // 
 
 #include "protothreads.h"
+#include <Wire.h>
 
+
+// I don't know what is this???????????????????
+const int I2C_ADD =0x50;
 
 pt ptReadSensors;
 pt ptSerialPrint;
@@ -24,6 +28,7 @@ long int time_from_LDR1_to_LDR2; // it is the time since the arrival of first se
 
 void setup()
  {
+  Wire.begin();
 
   PT_INIT(&ptReadSensors);
   PT_INIT(&ptSerialPrint);
@@ -105,7 +110,11 @@ if (LDR1_flag2 && LDR2_flag1){
     
 //    Serial.println(LDR2Data);
    }
-  
+
+
+  Wire.beginTransmission(I2C_ADD );
+ Wire.write("We are sending from arduino!!!");
+ Wire.endTransmission();
 
   PT_SLEEP(pt, 1000);
   }
@@ -115,6 +124,7 @@ if (LDR1_flag2 && LDR2_flag1){
 
 void loop()
  {
+
 
   
   //Print the sensor value on your serial monitor window
@@ -183,3 +193,10 @@ void loop()
   
   }
  }
+
+
+
+void sendToRaspPico(){
+  
+}
+ 
