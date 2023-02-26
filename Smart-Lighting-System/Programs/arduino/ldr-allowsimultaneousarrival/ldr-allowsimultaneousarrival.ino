@@ -3,6 +3,7 @@
 // https://www.youtube.com/watch?v=Wh-SjhngILU
 
 //https://www.youtube.com/watch?v=pbWhoJdYA1s
+//https://roboticsbackend.com/raspberry-pi-master-arduino-slave-i2c-communication-with-wiringpi/
 
 #include "protothreads.h"
 //This for the I2C connection to the raspberry pi pico
@@ -25,6 +26,10 @@ int LDR1_flag1 = 0, LDR1_flag2 = 0, LDR2_flag1=0, LDR2_flag2=0;
 // the most first time that a car passes throught the LDR and stay some time then departure it
 long int LDR1_first_arrival_time, LDR2_first_arrival_time, LDR1_arrival_time, LDR2_arrival_time;
 long int LDR1_first_departure_time, LDR2_first_departure_time;
+long int continuous_exists_time_1, continuous_exists_time_2, now_time, crowded_time ;
+
+const long int global_time = 1; //one second
+const long int sensor_local_time = 0.5; // the threshold value to say that it is crowd if above
 
 double distance = 0.172 ; // distance between the two sensors in meter
 long int time_from_LDR1_to_LDR2; // it is the time since the arrival of first sensor to second sensor
@@ -33,7 +38,7 @@ long int time_from_LDR1_to_LDR2; // it is the time since the arrival of first se
 void setup()
  {
   Wire.begin(); // join i2c bus
-  Wire.onRequest(requestEvent); // to send data from arduino 
+//  Wire.onRequest(requestEvent); // to send data from arduino 
 
   PT_INIT(&ptReadSensors);
   PT_INIT(&ptSerialPrint);
@@ -88,13 +93,15 @@ int serialPrintThread(struct pt* pt)
     
 
 
-if (LDR1_flag2 && LDR2_flag1){
-    Serial.print("Time between two sensors in s: ");
+//if (LDR1_flag2 && LDR2_flag1){
+//    Serial.print("Time between two sensors in s: ");
 //    time_from_LDR1_to_LDR2 = LDR2_first_arrival_time - LDR1_first_departure_time;
-    Serial.println((double)(time_from_LDR1_to_LDR2)/1000);
-    Serial.print("Velocity in m/s is : ");
-    Serial.println( (double)distance / (double)(time_from_LDR1_to_LDR2/1000) );
-}
+//    Serial.println((double)(time_from_LDR1_to_LDR2)/1000);
+//    Serial.print("Velocity in m/s is : ");
+//    Serial.println( (double)distance / (double)(time_from_LDR1_to_LDR2/1000) );
+//}
+
+
 //Serial.print("Sensor value: ");
 //  Serial.print(LDR1Data);
 //  Serial.print(" -- ");
@@ -104,13 +111,58 @@ if (LDR1_flag2 && LDR2_flag1){
 //  if (LDR1_flag2){
 //    Serial.print("total taken time for sensor 1 ");
 //    Serial.println(LDR1_first_departure_time - LDR1_first_arrival_time);
+//    long int taken_time_1 = LDR1_first_departure_time - LDR1_first_arrival_time;
+//    if (taken_time_1 > 0.5*global_time){
+      //
+//    }
 //  }
-
-   if ( LDR1_flag1 && !LDR1_flag2 ){
+  int crowd_flag1 = 0, crowd_flag2=0;
+ if (!crowd_flag1){
+        crowded_time = millis();
+        crowd_flag1 = 1;
+        }
+  while(crowded_time)
+   if ( LDR1_flag1 && !LDR1_flag2 && ){
     // You are still there in sensor 1
     if (LDR2_flag1 && !LDR2_flag2){
+      now_time = millis();
+      continuous_exists_time_1 = now_time - LDR1_first_arrival_time;
+      continuous_exists_time_2 = now_time - LDR2_first_arrival_time;
+      
+      if ( abs(continuous_exists_time_2 - continuous_exists_time_1) > min(continuous_exists_time_1, continuous_exists_time_2) ){
+//          if (!cont_flag1 && cont_flag2){
+        Serial.println("It is CROWDED here!!");
+        
+        //        isCrowded = true;
+//        if (!crowd_flag1){
+//        crowded_time = millis();
+//        crowd_flag1 = 1;
+//        }
+//        cont_flag1=1;
+//        cont_flag2 = 0;
+//      }
+      }
+     else if (continuous_exists_time_1 > 0.5*global_time &&  continuous_exists_time_2 > 0.5*global_time ){
+//      if (!cont_flag2 && cont_flag1){
+        Serial.println("It is CROWDED!!");
+        isCrowded = true;
+        
+//        cont_flag1 = 0;
+//        cont_flag2 = 1;
+//      }
+    else{
+      isCrowded = false;
+    }
+      }
+
+      
+      if (crowd_flag1) {
+        crowded_time
+      }
+  
+      
       // there are something on sensor 2 ALSO
-      Serial.println("It is CROWDED!!");
+      
     }
     
 //    Serial.println(LDR2Data);
@@ -155,8 +207,8 @@ void loop()
     if ( !data && LDR1_first_arrival_time !=0 && !LDR1_flag2){
       LDR1_first_departure_time = millis();
       
-      Serial.print("Departure time 1:");
-      Serial.println(LDR1_first_departure_time);
+//      Serial.print("Departure time 1:");
+//      Serial.println(LDR1_first_departure_time);
       LDR1_flag2 = 1;
       LDR1_flag1 = 0;
     }
@@ -175,8 +227,8 @@ void loop()
     }
     if ( !data && LDR2_first_arrival_time !=0 && !LDR2_flag2){
       LDR2_first_departure_time = millis();
-      Serial.print("Departure time 2:");
-      Serial.println(LDR2_first_departure_time);
+//      Serial.print("Departure time 2:");
+//      Serial.println(LDR2_first_departure_time);
       LDR2_flag2 = 1;
       LDR2_flag1 = 0;
     }
@@ -205,17 +257,17 @@ void sendToRaspPico(){
   
 }
 
-void requestEvent(){
-  int byte_value;
-  if( !lower_sent){
-    byte_value = value_to_pico & 0xff; // to send the lower byte and the higher bytes becomes zeros
-    lower_byte = true;
-  }
-  else{
-    byte_value = value_to_pico >> 8; // to shift the values to the right 8 times till replacing all the 8 higher bits witht the lower ones that were sent
-    lower_byte = false; // to be able to send data again
-  }
-  Wire.write(byte_value);
-}
+//void requestEvent(){
+//  int byte_value;
+//  if( !lower_sent){
+//    byte_value = value_to_pico & 0xff; // to send the lower byte and the higher bytes becomes zeros
+//    lower_byte = true;
+//  }
+//  else{
+//    byte_value = value_to_pico >> 8; // to shift the values to the right 8 times till replacing all the 8 higher bits witht the lower ones that were sent
+//    lower_byte = false; // to be able to send data again
+//  }
+//  Wire.write(byte_value);
+//}
 
  
