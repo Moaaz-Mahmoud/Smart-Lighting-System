@@ -1,13 +1,17 @@
 // https://forum.arduino.cc/t/speed-measurement-with-2-LDR-sensors-help/537046
 // https://forum.arduino.cc/t/calculate-distance-of-light-source-with-voltage-changes-of-analog-input-with-LDR/521967/6
-// 
+// https://www.youtube.com/watch?v=Wh-SjhngILU
+
+//https://www.youtube.com/watch?v=pbWhoJdYA1s
 
 #include "protothreads.h"
+//This for the I2C connection to the raspberry pi pico
 #include <Wire.h>
 
+const int I2C_ADD =0x50;  // This is the address of the arduino device
 
-// I don't know what is this???????????????????
-const int I2C_ADD =0x50;
+int value_to_pico = 2468;
+bool lower_sent = false; // this to check if the lower byte was sent successfully or not
 
 pt ptReadSensors;
 pt ptSerialPrint;
@@ -28,7 +32,8 @@ long int time_from_LDR1_to_LDR2; // it is the time since the arrival of first se
 
 void setup()
  {
-  Wire.begin();
+  Wire.begin(); // join i2c bus
+  Wire.onRequest(requestEvent); // to send data from arduino 
 
   PT_INIT(&ptReadSensors);
   PT_INIT(&ptSerialPrint);
@@ -112,9 +117,9 @@ if (LDR1_flag2 && LDR2_flag1){
    }
 
 
-  Wire.beginTransmission(I2C_ADD );
- Wire.write("We are sending from arduino!!!");
- Wire.endTransmission();
+//  Wire.beginTransmission(I2C_ADD );
+// Wire.write("We are sending from arduino!!!");
+// Wire.endTransmission();
 
   PT_SLEEP(pt, 1000);
   }
@@ -199,4 +204,18 @@ void loop()
 void sendToRaspPico(){
   
 }
+
+void requestEvent(){
+  int byte_value;
+  if( !lower_sent){
+    byte_value = value_to_pico & 0xff; // to send the lower byte and the higher bytes becomes zeros
+    lower_byte = true;
+  }
+  else{
+    byte_value = value_to_pico >> 8; // to shift the values to the right 8 times till replacing all the 8 higher bits witht the lower ones that were sent
+    lower_byte = false; // to be able to send data again
+  }
+  Wire.write(byte_value);
+}
+
  
